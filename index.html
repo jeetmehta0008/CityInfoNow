@@ -1,0 +1,343 @@
+<!DOCTYPE html><html lang="en"><head>
+  <meta charset="UTF-8">
+  <title>CityInfoNow | Weather & News</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    :root {
+      --primary: #007bff;
+      --bg: #f0f2f5;
+      --card-bg: rgba(255, 255, 255, 0.85);
+      --text-color: #333;
+      --header-color: white;
+      --card-title: #2c3e50;
+    }
+    body.dark {
+      --bg: #121212;
+      --card-bg: rgba(30, 30, 30, 0.9);
+      --text-color: #e0e0e0;
+      --header-color: #fff;
+      --card-title: #4da6ff;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text-color);
+      transition: background 0.3s, color 0.3s;
+    }
+    .header-wrapper {
+      background: linear-gradient(to right, #1d2671, #c33764);
+      padding: 30px 15px;
+      color: var(--header-color);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+      border-bottom-left-radius: 40px;
+      border-bottom-right-radius: 40px;
+      position: relative;
+    }
+    .toggle-container {
+      position: absolute;
+      top: 10px;
+      right: 20px;
+    }
+    .toggle-container label {
+      display: inline-block;
+      cursor: pointer;
+      background: #ccc;
+      border-radius: 20px;
+      width: 50px;
+      height: 26px;
+      position: relative;
+    }
+    .toggle-container label::after {
+      content: '';
+      width: 22px;
+      height: 22px;
+      background: white;
+      border-radius: 50%;
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      transition: 0.3s;
+    }
+    #modeToggle:checked + label::after {
+      transform: translateX(24px);
+    }
+    #modeToggle:checked + label {
+      background: #555;
+    }
+    #modeToggle {
+      display: none;
+    }
+    header {
+      text-align: center;
+    }
+    .search-box {
+      text-align: center;
+      margin: 25px auto;
+    }
+    .search-box input {
+      padding: 12px 16px;
+      font-size: 16px;
+      width: 80%;
+      max-width: 320px;
+      border: none;
+      border-radius: 50px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+      outline: none;
+    }
+    .card {
+      background: var(--card-bg);
+      backdrop-filter: blur(6px);
+      margin: 20px auto;
+      padding: 20px;
+      width: 90%;
+      max-width: 500px;
+      border-radius: 16px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+    }
+    .card h2 {
+      color: var(--card-title);
+      margin-bottom: 12px;
+    }
+    .card p {
+      font-size: 16px;
+      color: var(--text-color);
+    }
+    .news-list {
+      list-style: none;
+      padding: 0;
+    }
+    .news-list li {
+      margin-bottom: 10px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #444;
+    }
+    .news-list a {
+      text-decoration: none;
+      color: #4da6ff;
+    }
+    .news-list a:hover {
+      text-decoration: underline;
+    }
+    footer {
+      background-color: #2c3e50;
+      color: white;
+      text-align: center;
+      padding: 15px;
+      font-size: 14px;
+      margin-top: 40px;
+    }
+    #fullWeatherScreen {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: linear-gradient(to bottom, #4facfe, #00f2fe);
+      color: white;
+      overflow-y: auto;
+      z-index: 9999;
+      padding: 20px;
+    }
+    #fullWeatherScreen h1 {
+      font-size: 48px;
+      margin-bottom: 10px;
+    }
+    #fullWeatherScreen .hourly {
+      display: flex;
+      overflow-x: scroll;
+      margin-top: 20px;
+      gap: 16px;
+    }
+    #fullWeatherScreen .hourly div {
+      min-width: 80px;
+      padding: 10px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 12px;
+      text-align: center;
+    }
+    #fullWeatherScreen .close-btn {
+      position: absolute;
+      top: 10px;
+      right: 20px;
+      font-size: 30px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="header-wrapper">
+    <div class="toggle-container">
+      <input type="checkbox" id="modeToggle">
+      <label for="modeToggle"></label>
+    </div>
+    <header>
+      <h1>🌍 CityInfoNow</h1>
+      <p>Live Weather, Air Quality & News</p>
+    </header>
+  </div>
+  <div class="search-box">
+    <input list="cityList" type="text" id="cityInput" placeholder="🔍 Enter city and press Enter">
+    <datalist id="cityList"></datalist>
+  </div>
+  <div class="card weather-card">
+    <h2>Weather in ...</h2>
+    <p>Temperature: --°C</p>
+    <p>Condition: --</p>
+  </div>
+  <div class="card aqi-card">
+    <h2>Air Quality Index</h2>
+    <p>AQI: --</p>
+  </div>
+  <div class="card news-card">
+    <h2>Top News</h2>
+    <ul class="news-list" id="newsList">
+      <li>Loading news...</li>
+    </ul>
+  </div>  <div id="fullWeatherScreen">
+    <span class="close-btn" onclick="document.getElementById('fullWeatherScreen').style.display='none'">&times;</span>
+    <h1 id="fw-temp"></h1>
+    <p id="fw-desc"></p>
+    <p id="fw-humidity"></p>
+    <p id="fw-sun"></p>
+    <div class="hourly" id="hourlyList"></div>
+  </div>  <footer>
+    &copy; 2025 CityInfoNow | Built by Jeet Mehta
+  </footer>  <script>
+    const apiKey = "a6f572f673bf4a81a6806ca9268dbb0d";
+    const newsApiKey = "406f90bfe7d346f7bf8d03b7538f77ae";
+    const toggle = document.getElementById('modeToggle');
+    toggle.addEventListener('change', () => {
+      document.body.classList.toggle('dark');
+    });
+
+    let currentWeather = null;
+    let hourlyForecast = null;
+
+    document.querySelector('.weather-card').addEventListener('click', () => {
+      if (currentWeather && hourlyForecast) showFullWeather(currentWeather, hourlyForecast);
+    });
+
+    function showFullWeather(current, hourly) {
+      document.getElementById('fw-temp').textContent = `${current.main.temp}°C`;
+      document.getElementById('fw-desc').textContent = `Condition: ${current.weather[0].description}`;
+      document.getElementById('fw-humidity').textContent = `Humidity: ${current.main.humidity}%`;
+
+      const sunrise = new Date(current.sys.sunrise * 1000).toLocaleTimeString();
+      const sunset = new Date(current.sys.sunset * 1000).toLocaleTimeString();
+      document.getElementById('fw-sun').textContent = `Sunrise: ${sunrise}, Sunset: ${sunset}`;
+
+      const list = document.getElementById("hourlyList");
+      list.innerHTML = "";
+      hourly.list.slice(0, 8).forEach((h, i) => {
+        const div = document.createElement("div");
+        div.innerHTML = `<strong>${new Date(h.dt * 1000).getHours()}:00</strong><br>${h.main.temp}°C<br>${getEmoji(h.weather[0].main)}`;
+        list.appendChild(div);
+      });
+
+      document.getElementById('fullWeatherScreen').style.display = 'block';
+    }
+
+    async function getWeather(city) {
+      try {
+        const [res1, res2] = await Promise.all([
+          fetch(`https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}&units=metric`),
+          fetch(`https://api.openweathermap.org/data/2.5/forecast?q=${city}&appid=${apiKey}&units=metric`)
+        ]);
+        if (!res1.ok || !res2.ok) throw new Error("Weather not found");
+        const data1 = await res1.json();
+        const data2 = await res2.json();
+        currentWeather = data1;
+        hourlyForecast = data2;
+
+        document.querySelector(".weather-card h2").textContent = `Weather in ${data1.name}`;
+        document.querySelector(".weather-card p:nth-of-type(1)").textContent = `Temperature: ${data1.main.temp}°C`;
+        document.querySelector(".weather-card p:nth-of-type(2)").textContent = `Condition: ${data1.weather[0].description} ${getEmoji(data1.weather[0].main)}`;
+
+        getAQI(data1.coord.lat, data1.coord.lon);
+        getNews(city);
+      } catch (e) {
+        alert(e.message);
+      }
+    }
+
+    async function getAQI(lat, lon) {
+      try {
+        const res = await fetch(`https://api.openweathermap.org/data/2.5/air_pollution?lat=${lat}&lon=${lon}&appid=${apiKey}`);
+        if (!res.ok) throw new Error("AQI not found");
+        const data = await res.json();
+        const aqi = data.list[0].main.aqi;
+        const levels = {1:"Good 😊",2:"Fair 🙂",3:"Moderate 😐",4:"Poor 😷",5:"Very Poor 😵"};
+        document.querySelector(".aqi-card p").textContent = `AQI Level: ${aqi} - ${levels[aqi]}`;
+      } catch {
+        document.querySelector(".aqi-card p").textContent = "AQI: Not available";
+      }
+    }
+
+    async function getNews(city) {
+      try {
+        const res = await fetch(`https://newsapi.org/v2/everything?q=${city}&sortBy=publishedAt&pageSize=3&apiKey=${newsApiKey}`);
+        const data = await res.json();
+        if (data.status !== "ok") throw new Error("News API error");
+        const list = document.getElementById("newsList");
+        list.innerHTML = "";
+        data.articles.forEach(a => {
+          const li = document.createElement("li");
+          li.innerHTML = `<a href="${a.url}" target="_blank">${a.title}</a>`;
+          list.appendChild(li);
+        });
+      } catch {
+        document.getElementById("newsList").innerHTML = "<li>News not available</li>";
+      }
+    }
+
+    function getEmoji(c) {
+      return {
+        Clear:"☀️", Clouds:"☁️", Rain:"🌧️",
+        Thunderstorm:"⛈️", Snow:"❄️", Drizzle:"🌦️",
+        Mist:"🌫️", Fog:"🌫️"
+      }[c] || "🌡️";
+    }
+
+    async function getCitySuggestions(query) {
+      if (query.length < 3) return;
+      const res = await fetch(`https://api.openweathermap.org/geo/1.0/direct?q=${query}&limit=5&appid=${apiKey}`);
+      const data = await res.json();
+      const datalist = document.getElementById("cityList");
+      datalist.innerHTML = "";
+      data.forEach(place => {
+        const option = document.createElement("option");
+        option.value = place.name + (place.state ? `, ${place.state}` : "") + `, ${place.country}`;
+        datalist.appendChild(option);
+      });
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      const cityInput = document.getElementById("cityInput");
+      cityInput.addEventListener("keypress", e => {
+        if (e.key === "Enter") {
+          const city = cityInput.value.trim();
+          if (city) getWeather(city);
+        }
+      });
+      cityInput.addEventListener("input", () => {
+        const city = cityInput.value.trim();
+        getCitySuggestions(city);
+      });
+
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(async pos => {
+          const {latitude: lat, longitude: lon} = pos.coords;
+          const res = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric`);
+          const loc = await res.json();
+          getWeather(loc.name);
+        });
+      }
+    });
+  </script></body>
+</html>
