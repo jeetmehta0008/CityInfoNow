@@ -1,5 +1,4 @@
-<!DOCTYPE html><html lang="en"><head>
-  <meta charset="UTF-8">
+<!DOCTYPE html><html lang="en"><head>  <meta charset="UTF-8">
   <title>CityInfoNow | Weather & News</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
@@ -182,7 +181,7 @@
     </header>
   </div>
   <div class="search-box">
-    <input list="cityList" type="text" id="cityInput" placeholder="🔍 Enter city and press Enter">
+    <input list="cityList" type="text" id="cityInput" placeholder="🔍 Enter city">
     <datalist id="cityList"></datalist>
   </div>
   <div class="card weather-card">
@@ -199,145 +198,149 @@
     <ul class="news-list" id="newsList">
       <li>Loading news...</li>
     </ul>
-  </div>  <div id="fullWeatherScreen">
+  </div>
+  <div id="fullWeatherScreen">
     <span class="close-btn" onclick="document.getElementById('fullWeatherScreen').style.display='none'">&times;</span>
     <h1 id="fw-temp"></h1>
     <p id="fw-desc"></p>
     <p id="fw-humidity"></p>
     <p id="fw-sun"></p>
     <div class="hourly" id="hourlyList"></div>
-  </div>  <footer>
+  </div>
+  <footer>
     &copy; 2025 CityInfoNow | Built by Jeet Mehta
-  </footer>  <script>
+  </footer>
+  <script>
     const apiKey = "a6f572f673bf4a81a6806ca9268dbb0d";
-    const newsApiKey = "406f90bfe7d346f7bf8d03b7538f77ae";
+    const newsApiKey = "pub_3568dc3371cd4b389a0585102d6e4a0d";
     const toggle = document.getElementById('modeToggle');
     toggle.addEventListener('change', () => {
       document.body.classList.toggle('dark');
+    });let currentWeather = null;
+let hourlyForecast = null;
+
+document.querySelector('.weather-card').addEventListener('click', () => {
+  if (currentWeather && hourlyForecast) showFullWeather(currentWeather, hourlyForecast);
+});
+
+function showFullWeather(current, hourly) {
+  document.getElementById('fw-temp').textContent = `${current.main.temp}°C`;
+  document.getElementById('fw-desc').textContent = `Condition: ${current.weather[0].description}`;
+  document.getElementById('fw-humidity').textContent = `Humidity: ${current.main.humidity}%`;
+
+  const sunrise = new Date(current.sys.sunrise * 1000).toLocaleTimeString();
+  const sunset = new Date(current.sys.sunset * 1000).toLocaleTimeString();
+  document.getElementById('fw-sun').textContent = `Sunrise: ${sunrise}, Sunset: ${sunset}`;
+
+  const list = document.getElementById("hourlyList");
+  list.innerHTML = "";
+  hourly.list.slice(0, 8).forEach((h) => {
+    const div = document.createElement("div");
+    div.innerHTML = `<strong>${new Date(h.dt * 1000).getHours()}:00</strong><br>${h.main.temp}°C<br>${getEmoji(h.weather[0].main)}`;
+    list.appendChild(div);
+  });
+
+  document.getElementById('fullWeatherScreen').style.display = 'block';
+}
+
+async function getWeather(city) {
+  try {
+    const [res1, res2] = await Promise.all([
+      fetch(`https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}&units=metric`),
+      fetch(`https://api.openweathermap.org/data/2.5/forecast?q=${city}&appid=${apiKey}&units=metric`)
+    ]);
+    if (!res1.ok || !res2.ok) throw new Error("Weather not found");
+    const data1 = await res1.json();
+    const data2 = await res2.json();
+    currentWeather = data1;
+    hourlyForecast = data2;
+
+    document.querySelector(".weather-card h2").textContent = `Weather in ${data1.name}`;
+    document.querySelector(".weather-card p:nth-of-type(1)").textContent = `Temperature: ${data1.main.temp}°C`;
+    document.querySelector(".weather-card p:nth-of-type(2)").textContent = `Condition: ${data1.weather[0].description} ${getEmoji(data1.weather[0].main)}`;
+
+    getAQI(data1.coord.lat, data1.coord.lon);
+    getNews(city);
+  } catch (e) {
+    alert(e.message);
+  }
+}
+
+async function getAQI(lat, lon) {
+  try {
+    const res = await fetch(`https://api.openweathermap.org/data/2.5/air_pollution?lat=${lat}&lon=${lon}&appid=${apiKey}`);
+    if (!res.ok) throw new Error("AQI not found");
+    const data = await res.json();
+    const aqi = data.list[0].main.aqi;
+    const levels = {1:"Good 😊",2:"Fair 🙂",3:"Moderate 😐",4:"Poor 😷",5:"Very Poor 😵"};
+    document.querySelector(".aqi-card p").textContent = `AQI Level: ${aqi} - ${levels[aqi]}`;
+  } catch {
+    document.querySelector(".aqi-card p").textContent = "AQI: Not available";
+  }
+}
+
+async function getNews(city) {
+  try {
+    const res = await fetch(`https://newsdata.io/api/1/latest?apikey=${newsApiKey}&q=${city}&country=in&language=en`);
+    const data = await res.json();
+    const list = document.getElementById("newsList");
+    list.innerHTML = "";
+    if (data.results && data.results.length) {
+      data.results.slice(0, 3).forEach(a => {
+        const li = document.createElement("li");
+        li.innerHTML = `<a href="${a.link}" target="_blank">${a.title}</a>`;
+        list.appendChild(li);
+      });
+    } else {
+      list.innerHTML = "<li>No recent news found</li>";
+    }
+  } catch {
+    document.getElementById("newsList").innerHTML = "<li>News not available</li>";
+  }
+}
+
+function getEmoji(c) {
+  return {
+    Clear:"☀️", Clouds:"☁️", Rain:"🌧️",
+    Thunderstorm:"⛈️", Snow:"❄️", Drizzle:"🌦️",
+    Mist:"🌫️", Fog:"🌫️"
+  }[c] || "🌡️";
+}
+
+async function getCitySuggestions(query) {
+  if (query.length < 3) return;
+  const res = await fetch(`https://api.openweathermap.org/geo/1.0/direct?q=${query}&limit=5&appid=${apiKey}`);
+  const data = await res.json();
+  const datalist = document.getElementById("cityList");
+  datalist.innerHTML = "";
+  data.forEach(place => {
+    const option = document.createElement("option");
+    option.value = place.name + (place.state ? `, ${place.state}` : "") + `, ${place.country}`;
+    datalist.appendChild(option);
+  });
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  const cityInput = document.getElementById("cityInput");
+  cityInput.addEventListener("input", () => {
+    const city = cityInput.value.trim();
+    getCitySuggestions(city);
+  });
+  cityInput.addEventListener("change", () => {
+    const city = cityInput.value.trim();
+    if (city) getWeather(city);
+  });
+
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(async pos => {
+      const {latitude: lat, longitude: lon} = pos.coords;
+      const res = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric`);
+      const loc = await res.json();
+      getWeather(loc.name);
     });
+  }
+});
 
-    let currentWeather = null;
-    let hourlyForecast = null;
-
-    document.querySelector('.weather-card').addEventListener('click', () => {
-      if (currentWeather && hourlyForecast) showFullWeather(currentWeather, hourlyForecast);
-    });
-
-    function showFullWeather(current, hourly) {
-      document.getElementById('fw-temp').textContent = `${current.main.temp}°C`;
-      document.getElementById('fw-desc').textContent = `Condition: ${current.weather[0].description}`;
-      document.getElementById('fw-humidity').textContent = `Humidity: ${current.main.humidity}%`;
-
-      const sunrise = new Date(current.sys.sunrise * 1000).toLocaleTimeString();
-      const sunset = new Date(current.sys.sunset * 1000).toLocaleTimeString();
-      document.getElementById('fw-sun').textContent = `Sunrise: ${sunrise}, Sunset: ${sunset}`;
-
-      const list = document.getElementById("hourlyList");
-      list.innerHTML = "";
-      hourly.list.slice(0, 8).forEach((h, i) => {
-        const div = document.createElement("div");
-        div.innerHTML = `<strong>${new Date(h.dt * 1000).getHours()}:00</strong><br>${h.main.temp}°C<br>${getEmoji(h.weather[0].main)}`;
-        list.appendChild(div);
-      });
-
-      document.getElementById('fullWeatherScreen').style.display = 'block';
-    }
-
-    async function getWeather(city) {
-      try {
-        const [res1, res2] = await Promise.all([
-          fetch(`https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}&units=metric`),
-          fetch(`https://api.openweathermap.org/data/2.5/forecast?q=${city}&appid=${apiKey}&units=metric`)
-        ]);
-        if (!res1.ok || !res2.ok) throw new Error("Weather not found");
-        const data1 = await res1.json();
-        const data2 = await res2.json();
-        currentWeather = data1;
-        hourlyForecast = data2;
-
-        document.querySelector(".weather-card h2").textContent = `Weather in ${data1.name}`;
-        document.querySelector(".weather-card p:nth-of-type(1)").textContent = `Temperature: ${data1.main.temp}°C`;
-        document.querySelector(".weather-card p:nth-of-type(2)").textContent = `Condition: ${data1.weather[0].description} ${getEmoji(data1.weather[0].main)}`;
-
-        getAQI(data1.coord.lat, data1.coord.lon);
-        getNews(city);
-      } catch (e) {
-        alert(e.message);
-      }
-    }
-
-    async function getAQI(lat, lon) {
-      try {
-        const res = await fetch(`https://api.openweathermap.org/data/2.5/air_pollution?lat=${lat}&lon=${lon}&appid=${apiKey}`);
-        if (!res.ok) throw new Error("AQI not found");
-        const data = await res.json();
-        const aqi = data.list[0].main.aqi;
-        const levels = {1:"Good 😊",2:"Fair 🙂",3:"Moderate 😐",4:"Poor 😷",5:"Very Poor 😵"};
-        document.querySelector(".aqi-card p").textContent = `AQI Level: ${aqi} - ${levels[aqi]}`;
-      } catch {
-        document.querySelector(".aqi-card p").textContent = "AQI: Not available";
-      }
-    }
-
-    async function getNews(city) {
-      try {
-        const res = await fetch(`https://newsapi.org/v2/everything?q=${city}&sortBy=publishedAt&pageSize=3&apiKey=${newsApiKey}`);
-        const data = await res.json();
-        if (data.status !== "ok") throw new Error("News API error");
-        const list = document.getElementById("newsList");
-        list.innerHTML = "";
-        data.articles.forEach(a => {
-          const li = document.createElement("li");
-          li.innerHTML = `<a href="${a.url}" target="_blank">${a.title}</a>`;
-          list.appendChild(li);
-        });
-      } catch {
-        document.getElementById("newsList").innerHTML = "<li>News not available</li>";
-      }
-    }
-
-    function getEmoji(c) {
-      return {
-        Clear:"☀️", Clouds:"☁️", Rain:"🌧️",
-        Thunderstorm:"⛈️", Snow:"❄️", Drizzle:"🌦️",
-        Mist:"🌫️", Fog:"🌫️"
-      }[c] || "🌡️";
-    }
-
-    async function getCitySuggestions(query) {
-      if (query.length < 3) return;
-      const res = await fetch(`https://api.openweathermap.org/geo/1.0/direct?q=${query}&limit=5&appid=${apiKey}`);
-      const data = await res.json();
-      const datalist = document.getElementById("cityList");
-      datalist.innerHTML = "";
-      data.forEach(place => {
-        const option = document.createElement("option");
-        option.value = place.name + (place.state ? `, ${place.state}` : "") + `, ${place.country}`;
-        datalist.appendChild(option);
-      });
-    }
-
-    document.addEventListener("DOMContentLoaded", () => {
-      const cityInput = document.getElementById("cityInput");
-      cityInput.addEventListener("keypress", e => {
-        if (e.key === "Enter") {
-          const city = cityInput.value.trim();
-          if (city) getWeather(city);
-        }
-      });
-      cityInput.addEventListener("input", () => {
-        const city = cityInput.value.trim();
-        getCitySuggestions(city);
-      });
-
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(async pos => {
-          const {latitude: lat, longitude: lon} = pos.coords;
-          const res = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric`);
-          const loc = await res.json();
-          getWeather(loc.name);
-        });
-      }
-    });
-  </script></body>
+  </script>
+</body>
 </html>
