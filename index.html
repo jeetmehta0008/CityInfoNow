@@ -1,4 +1,13 @@
-<!DOCTYPE html><html lang="en"><head>  <meta charset="UTF-8">
+<!DOCTYPE html><html lang="en">
+<head>
+  <!-- ✅ Google Analytics Tag -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-TMTCNKCPGK"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-TMTCNKCPGK');
+  </script>  <meta charset="UTF-8">
   <title>CityInfoNow | Weather & News</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
@@ -216,10 +225,9 @@
     const toggle = document.getElementById('modeToggle');
     toggle.addEventListener('change', () => {
       document.body.classList.toggle('dark');
-    });let currentWeather = null;
-let hourlyForecast = null;
-
-document.querySelector('.weather-card').addEventListener('click', () => {
+    });
+    let currentWeather = null;
+    let hourlyForecast = null;document.querySelector('.weather-card').addEventListener('click', () => {
   if (currentWeather && hourlyForecast) showFullWeather(currentWeather, hourlyForecast);
 });
 
